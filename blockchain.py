@@ -1,3 +1,6 @@
+#Initialize the mining reward for block miner
+MINING_REWARD = 10
+
 # Initializing our (empty) blockchain list
 genesis_block={
 "previous_hash":"",
@@ -8,6 +11,7 @@ blockchain = []
 blockchain.append(genesis_block)
 open_transactions=[]
 owner="Max"
+participants={"Max"}
 
 def get_last_blockchain_value():
     """ Returns the last value of the current blockchain. """
@@ -27,24 +31,73 @@ def add_transaction(recipient,sender=owner, amount=1.0):
         :transaction_amount: The amount that should be added.
         :last_transaction: The last blockchain transaction (default [1]).
     """
-    transction={"sender":sender, "recipient":recipient, "amount":amount}
-    open_transactions.append(transction)
-
+    transction={"sender":sender,
+        "recipient":recipient,
+        "amount":amount}
+    if verify_transaction(transction):
+        open_transactions.append(transction)
+        participants.add(sender)
+        participants.add(recipient)
+        return True
+    return False
 
 def hash_block(block):
     return "-".join([str(block[key]) for key in block])
+
+def get_balance(participant):
+    tx_sender = [[tx['amount'] for tx in block['transactions'] if tx['sender'] == participant] for block in blockchain]
+    open_tx_sender = [tx['amount'] for tx in open_transactions if tx['sender'] == participant]
+    tx_sender.append(open_tx_sender)
+    amount_sent = 0
+    # Calculate the total amount of coins sent
+    for tx in tx_sender:
+        if len(tx) > 0:
+            amount_sent += tx[0]
+    # This fetches received coin amounts of transactions that were already included in blocks of the blockchain
+    # We ignore open transactions here because you shouldn't be able to spend coins before the transaction was confirmed + included in a block
+    tx_recipient = [[tx['amount'] for tx in block['transactions'] if tx['recipient'] == participant] for block in blockchain]
+    amount_received = 0
+    for tx in tx_recipient:
+        if len(tx) > 0:
+            amount_received += tx[0]
+    # Return the total balance
+    return amount_received - amount_sent
+
+
+
+def verify_transaction(transction):
+    """
+    Check if the sender has sufficient amount
+    """
+    sender_balance=get_balance(transction["sender"])
+    return sender_balance>=transction["amount"]
+
+def verify_transactions():
+    """
+    Verify all the transactions
+    """
+    return all([verify_transaction(t) for t in open_transactions])
 
 
 def mine_block():
     last_block=blockchain[-1]
     hashed_block=hash_block(last_block)
-    print(hashed_block)
+    #print(hashed_block)
+    reward_transaction={
+    "sender":"MINING",
+    "recipient":owner,
+    "amount":MINING_REWARD
+    }
+
+    copied_transactions=open_transactions[:]
+    copied_transactions.append(reward_transaction)
     block={
     "previous_hash":hashed_block,
     "index": len(blockchain),
-    "transactions":open_transactions
+    "transactions":copied_transactions
     }
     blockchain.append(block)
+    return True
 
 
 def get_transaction_value():
@@ -89,8 +142,10 @@ waiting_for_input = True
 while waiting_for_input:
     print('Please choose')
     print('1: Add a new transaction value')
-    print("2: Hash the new block")
+    print("2: Mine the new block")
     print('3: Output the blockchain blocks')
+    print("4: Ouput the participants")
+    print("5: Check transaction validity")
     print('h: Manipulate the chain')
     print('q: Quit')
     user_choice = get_user_choice()
@@ -98,12 +153,22 @@ while waiting_for_input:
         tx_data = get_transaction_value()
         # Add the transaction amount to the blockchain
         recipient,amount=tx_data
-        add_transaction(recipient,amount=amount)
+        if add_transaction(recipient,amount=amount):
+            print('Added transaction!')
+        else:
+            print('Transaction failed!')
         print(open_transactions)
     elif user_choice=="2":
         mine_block()
     elif user_choice == '3':
         print_blockchain_elements()
+    elif user_choice=="4":
+        print(participants)
+    elif user_choice == '5':
+        if verify_transactions():
+            print('All transactions are valid')
+        else:
+            print('There are invalid transactions')
     elif user_choice == 'h':
         # Make sure that you don't try to "hack" the blockchain if it's empty
         if len(blockchain) >= 1:
@@ -122,6 +187,7 @@ while waiting_for_input:
         print('Invalid blockchain!')
         # Break out of the loop
         break
+    print(get_balance("Max"))
 else:
     print('User left!')
 
