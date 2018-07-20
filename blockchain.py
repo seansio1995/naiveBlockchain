@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import functools
 import hashlib as hl
 import json
@@ -157,6 +158,9 @@ def verify_chain():
         if index==0:
             continue
         if block["previous_hash"]!=hash_block(blockchain[index-1]):
+            return False
+        if not valid_proof(block['transactions'][:-1], block['previous_hash'], block['proof']):
+            print('Proof of work is invalid')
             return False
     return True
 
