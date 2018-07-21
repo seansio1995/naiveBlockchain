@@ -19,6 +19,24 @@ open_transactions=[]
 owner="Max"
 participants={"Max"}
 
+def save_data():
+    with open('blockchain.txt', mode='w') as f:
+        f.write(json.dumps(blockchain))
+        f.write('\n')
+        f.write(json.dumps(open_transactions))
+        # save_data = {
+        #     'chain': blockchain,
+        #     'ot': open_transactions
+        # }
+        # f.write(pickle.dumps(save_data))
+    print('Saving failed!')
+
+
+
+
+
+
+
 
 def valid_proof(transactions, last_hash, proof):
     """Validate a proof of work number and see if it solves the puzzle algorithm (two leading 0s)
@@ -73,6 +91,7 @@ def add_transaction(recipient,sender=owner, amount=1.0):
         open_transactions.append(transction)
         participants.add(sender)
         participants.add(recipient)
+        save_data()
         return True
     return False
 
@@ -190,7 +209,9 @@ while waiting_for_input:
             print('Transaction failed!')
         print(open_transactions)
     elif user_choice=="2":
-        mine_block()
+        if mine_block():
+            open_transactions=[]
+            save_data()
     elif user_choice == '3':
         print_blockchain_elements()
     elif user_choice=="4":
